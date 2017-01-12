@@ -1,4 +1,4 @@
-# mc_2nd_order_poisson_test
+# mcmaxenttest
 
 Description
 -----------
@@ -19,7 +19,7 @@ Files
 
 README.md    - This file
 LICENSE      - Software license
-demo.m       - Demonstration of how to apply the test to spike count data
+demo.m       - Demonstration of how to apply the test to count data
 mcmaxenttest - Monte Carlo maximum entropy test
 
 
