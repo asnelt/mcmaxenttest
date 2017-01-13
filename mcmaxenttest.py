@@ -1,4 +1,4 @@
-# Copyright (C) 2012  Arno Onken
+# Copyright (C) 2012, 2017  Arno Onken
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -17,45 +17,44 @@ from numpy import zeros, arange, maximum, log2, float64, random, multiply
 from numpy import exp, dot, outer, sqrt, finfo, ceil
 from numpy import concatenate
 from scipy.stats import poisson
-from scipy.optimize import anneal, fsolve
+from scipy.optimize import differential_evolution, fsolve
 
-def mc_2nd_order_poisson_test(x, y, alpha=0.05, n_mc=100, n_iter=1):
+def mc_2nd_order_poisson_test(x, y, alpha=0.05, n_mc=1000, maxiter=1000):
     ''' Test for linear correlation maximum entropy between x and y, assuming
         that x and y are non-negative integer vectors.
 
         Arguments:
-         x      - Vector of integer random values
-         y      - Vector of integer random values of the same size as x
-         alpha  - Significance level (default alpha = 0.05)
-         n_mc   - Number of Monte Carlo samples (default n_mc = 1000)
-         n_iter - Maximum number of iterations of the survival function search
-                  (default n_iter = 0)
+         x       - Vector of integer random values
+         y       - Vector of integer random values of the same size as x
+         alpha   - Significance level (default alpha = 0.05)
+         n_mc    - Number of Monte Carlo samples (default n_mc = 1000)
+         maxiter - Maximum number of iterations of the survival function search
+                  (default n_iter = 1000)
 
         Returns:
-         h      - 1 indicates rejection of the linear correlation maximum entropy
-                  hypothesis at the specified significance level; 0 otherwise
-         p      - p-value at the specified significance level
+         h       - 1 indicates rejection of the linear correlation maximum entropy
+                   hypothesis at the specified significance level; 0 otherwise
+         p       - p-value at the specified significance level
     '''
     # Generate contingency table
     cont = zeros((x.max()+1, y.max()+1), dtype='float64')
     for i in range(x.size):
         cont[x[i], y[i]] += 1
-    # Maximum entropy model for fixed marginals and correlation
-    emp_p = cont / x.size
-    (emp_lambda_0, emp_lambda_1, emp_correlation) = constraints(emp_p)
-    x0 = [emp_lambda_0, emp_lambda_1, emp_correlation]
-    if (n_iter < 1):
+    if (maxiter < 1):
         # Do not search supremum of survival function
+        emp_p = cont / x.size
+        # Maximum entropy model for fixed marginals and correlation
+        (emp_lambda_0, emp_lambda_1, emp_correlation) = constraints(emp_p)
+        x0 = [emp_lambda_0, emp_lambda_1, emp_correlation]
         g = survival(x0, cont, n_mc)
     else:
         # Search supremum of survival function
         valfun = lambda theta: -survival(theta.T, cont, n_mc)
         # Constraints for probability mass functions
-        lb = [finfo(float).eps, finfo(float).eps, -1.0]
-        # Use maximum count as upper bound for rate
-        ub = [x.max()+1.0, y.max()+1.0, 1.0]
-        (theta, retval) = anneal(valfun, x0, lower=lb, upper=ub, maxiter=n_iter)
-        g = -valfun(theta)
+        bounds = [(finfo(float).eps, x.max()+1.0), (finfo(float).eps, y.max()+1.0), (-1.0, 1.0)]
+        result = differential_evolution(valfun, bounds, maxiter=maxiter)
+        # Run stochastic value function again at optimal value
+        g = -valfun(result.x)
     # Monte Carlo finite sample correction
     p = (n_mc * g + 1.0) / (n_mc + 1.0)
     h = p < alpha
