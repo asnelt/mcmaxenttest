@@ -29,7 +29,7 @@ def mc_2nd_order_poisson_test(x, y, alpha=0.05, n_mc=1000, maxiter=1000):
          alpha   - Significance level (default alpha = 0.05)
          n_mc    - Number of Monte Carlo samples (default n_mc = 1000)
          maxiter - Maximum number of iterations of the survival function search
-                  (default n_iter = 1000)
+                   (default n_iter = 1000)
 
         Returns:
          h       - 1 indicates rejection of the linear correlation maximum entropy

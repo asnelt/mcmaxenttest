@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Copyright (C) 2012  Arno Onken
+# Copyright (C) 2012, 2017  Arno Onken
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -18,15 +18,34 @@ Demonstration of a Monte Carlo maximum entropy test showing how to apply
 the test to spike count data.
 """
 
+from scipy.stats import poisson
 from mcmaxenttest import *
 
-# First variable: put the random integer values of your first element here
-x = arange(5)
-# Second variable: put the random integer values of your second element here
-y = arange(5)
-# Apply test
-(h,p) = mc_2nd_order_poisson_test(x, y)
+
+# Number of test repetitions
+N_TRIALS = 20
+# Number of samples to draw in each trial
+N_SAMPLES = 100
+# Alpha level of the test
+ALPHA = 0.05
+# Poisson firing rate
+RATE = 3 # Corresponds to 30 Hz for 100 ms bins
+
+# Apply test to independent Poisson samples
+print("Applying test to independent Poisson samples...")
+# Rejection flags
+h_ind = zeros((N_TRIALS, 1), dtype=bool)
+# p-values
+p_ind = zeros((N_TRIALS, 1))
+for i in range(N_TRIALS):
+    print(" Trial " + str(i) + " of " + str(N_TRIALS))
+    # Draw independent Poisson samples
+    x = poisson.rvs([RATE] * N_SAMPLES)
+    y = poisson.rvs([RATE] * N_SAMPLES)
+    # Apply test
+    (h_ind[i], p_ind[i]) = mc_2nd_order_poisson_test(x, y, alpha=ALPHA)
+
 # Print results
-print("Rejected: " + str(h))
-print("p-value:  " + str(p))
+print("Rejections for independent Poisson samples: " + str(h_ind.mean() * 100) + "%")
+print("Average p-value:                            " + str(p_ind.mean()))
 
