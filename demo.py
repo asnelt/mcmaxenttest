@@ -1,5 +1,4 @@
-# -*- coding: utf-8 -*-
-# Copyright (C) 2012, 2017  Arno Onken
+# Copyright (C) 2012, 2017 Arno Onken
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -15,10 +14,10 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
 Demonstration of a Monte Carlo maximum entropy test showing how to apply
-the test to spike count data.
+the test to count data.
 """
 
-from scipy.stats import poisson
+from scipy.stats import poisson, norm, multivariate_normal, uniform
 from mcmaxenttest import *
 
 
@@ -28,8 +27,8 @@ N_TRIALS = 20
 N_SAMPLES = 100
 # Alpha level of the test
 ALPHA = 0.05
-# Poisson firing rate
-RATE = 3 # Corresponds to 30 Hz for 100 ms bins
+# Poisson rate
+RATE = 3
 
 # Apply test to independent Poisson samples
 print("Applying test to independent Poisson samples...")
@@ -38,14 +37,42 @@ h_ind = zeros((N_TRIALS, 1), dtype=bool)
 # p-values
 p_ind = zeros((N_TRIALS, 1))
 for i in range(N_TRIALS):
-    print(" Trial " + str(i) + " of " + str(N_TRIALS))
+    print(" Trial " + str(i+1) + " of " + str(N_TRIALS))
     # Draw independent Poisson samples
     x = poisson.rvs([RATE] * N_SAMPLES)
     y = poisson.rvs([RATE] * N_SAMPLES)
     # Apply test
     (h_ind[i], p_ind[i]) = mc_2nd_order_poisson_test(x, y, alpha=ALPHA)
 
+# Apply test to samples from a higher-order distribution
+print("Applying test to higher-order samples...")
+# Correlation parameters of mixture components
+RHO_1 = 0.9
+RHO_2 = -0.9
+# Rejection flags
+h_ho = zeros((N_TRIALS, 1), dtype=bool)
+# p-values
+p_ho = zeros((N_TRIALS, 1))
+for i in range(N_TRIALS):
+    print(" Trial " + str(i+1) + " of " + str(N_TRIALS))
+    # Draw samples from a higher-order mixture distribution
+    u = norm.cdf(multivariate_normal.rvs([0, 0], \
+            [[1, RHO_1], [RHO_1, 1]], N_SAMPLES))
+    v = norm.cdf(multivariate_normal.rvs([0, 0], \
+            [[1, RHO_2], [RHO_2, 1]], N_SAMPLES))
+    z = uniform.rvs(size=N_SAMPLES)
+    u[z>0.5, :] = v[z>0.5, :]
+    # Transform uniform marginals to Poisson marginals
+    x = poisson.ppf(u[:, 0], RATE)
+    y = poisson.ppf(u[:, 1], RATE)
+    # Apply test
+    (h_ho[i], p_ho[i]) = mc_2nd_order_poisson_test(x, y, alpha=ALPHA)
+
 # Print results
-print("Rejections for independent Poisson samples: " + str(h_ind.mean() * 100) + "%")
-print("Average p-value:                            " + str(p_ind.mean()))
+print("Independent Poisson samples:")
+print(" Rejections:      " + str(h_ind.mean() * 100) + "%")
+print(" Average p-value: " + str(p_ind.mean()))
+print("Higher-order samples:")
+print(" Rejections:      " + str(h_ho.mean() * 100) + "%")
+print(" Average p-value: " + str(p_ho.mean()))
 
