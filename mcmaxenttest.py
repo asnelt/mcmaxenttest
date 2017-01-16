@@ -24,7 +24,7 @@ from numpy import exp, dot, outer, sqrt, finfo, ceil, concatenate
 def mc_2nd_order_poisson_test(x, y, alpha=0.05, nmc=1000, maxiter=1000):
     '''
     Test for linear correlation maximum entropy between x and y, assuming
-    that x and y are non-negative integer vectors.
+    that x and y are non-negative integer arrays.
 
     Args:
         x: First array of non-negative integer random values.
@@ -146,7 +146,7 @@ def maxent_val(x, marginal_0, marginal_1, product_moment):
     f_0 = x[0:n_0]
     f_1 = x[n_0:(n_0+n_1)]
     mu = x[-1]
-    # Output vector
+    # Output array
     y = zeros(x.size, dtype=float64)
     y[0:n_0] = f_0 * dot(f_1, exp(mu * outer(support_1, support_0))) \
             - marginal_0
