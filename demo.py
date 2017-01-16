@@ -18,7 +18,7 @@ the test to count data.
 """
 
 from scipy.stats import poisson, norm, multivariate_normal, uniform
-from numpy import zeros
+import numpy as np
 from mcmaxenttest import mc_2nd_order_poisson_test
 
 
@@ -29,14 +29,14 @@ N_SAMPLES = 100
 # Significance level of the test
 ALPHA = 0.05
 # Poisson rate
-RATE = 5 
+RATE = 5
 
 # Apply test to independent Poisson samples
 print("Applying test to independent Poisson samples...")
 # Rejection results
-h_ind = zeros((N_TRIALS, 1), dtype=bool)
+h_ind = np.zeros((N_TRIALS, 1), dtype=bool)
 # p-values
-p_ind = zeros((N_TRIALS, 1))
+p_ind = np.zeros((N_TRIALS, 1))
 for i in range(N_TRIALS):
     print(" Trial " + str(i+1) + " of " + str(N_TRIALS))
     # Draw independent Poisson samples
@@ -51,9 +51,9 @@ print("Applying test to higher-order samples...")
 RHO_1 = 0.9
 RHO_2 = -0.9
 # Rejection results
-h_ho = zeros((N_TRIALS, 1), dtype=bool)
+h_ho = np.zeros((N_TRIALS, 1), dtype=bool)
 # p-values
-p_ho = zeros((N_TRIALS, 1))
+p_ho = np.zeros((N_TRIALS, 1))
 for i in range(N_TRIALS):
     print(" Trial " + str(i+1) + " of " + str(N_TRIALS))
     # Draw samples from a higher-order mixture distribution
@@ -62,7 +62,7 @@ for i in range(N_TRIALS):
     v = norm.cdf(multivariate_normal.rvs([0, 0], \
             [[1, RHO_2], [RHO_2, 1]], N_SAMPLES))
     z = uniform.rvs(size=N_SAMPLES)
-    u[z>0.5, :] = v[z>0.5, :]
+    u[z > 0.5, :] = v[z > 0.5, :]
     # Transform uniform marginals to Poisson marginals
     x = poisson.ppf(u[:, 0], RATE)
     y = poisson.ppf(u[:, 1], RATE)
