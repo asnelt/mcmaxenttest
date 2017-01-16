@@ -16,24 +16,24 @@
 This module implements a Monte Carlo maximum entropy test for count data.
 '''
 
-from scipy.optimize import differential_evolution, fsolve
+from scipy.optimize import root, minimize
 from scipy.stats import poisson
 from numpy import zeros, arange, maximum, log2, float64, random, multiply
-from numpy import exp, dot, outer, sqrt, finfo, ceil
-from numpy import concatenate
+from numpy import exp, dot, outer, sqrt, finfo, ceil, concatenate
 
-def mc_2nd_order_poisson_test(x, y, alpha=0.05, n_mc=1000, maxiter=1000):
+def mc_2nd_order_poisson_test(x, y, alpha=0.05, nmc=1000, maxiter=1000):
     '''
     Test for linear correlation maximum entropy between x and y, assuming
     that x and y are non-negative integer vectors.
 
     Args:
-        x: Vector of integer random values.
-        y: Vector of integer random values of the same size as x.
-        alpha: Significance level (default alpha = 0.05).
-        n_mc: Number of Monte Carlo samples (default n_mc = 1000).
-        maxiter: Maximum number of iterations of the survival function
-                 search (default n_iter = 1000).
+        x: First array of non-negative integer random values.
+        y: Second array of non-negative integer random values of the same
+           size as x.
+        alpha: Significance level. Defaults to 0.05.
+        nmc: Number of Monte Carlo samples. Defaults to 1000.
+        maxiter: Maximum number of iterations for the survival function
+                 optimization. Defaults to 1000.
 
     Returns:
         h: 1 indicates rejection of the linear correlation maximum entropy
@@ -44,33 +44,34 @@ def mc_2nd_order_poisson_test(x, y, alpha=0.05, n_mc=1000, maxiter=1000):
     cont = zeros((int(x.max())+1, int(y.max())+1), dtype='float64')
     for i in range(x.size):
         cont[int(x[i]), int(y[i])] += 1
+    emp_p = cont / x.size
+    # Maximum entropy model for fixed marginals and correlation
+    (emp_lambda_0, emp_lambda_1, emp_correlation) = constraints(emp_p)
+    x0 = [emp_lambda_0, emp_lambda_1, emp_correlation]
     if maxiter < 1:
         # Do not search supremum of survival function
-        emp_p = cont / x.size
-        # Maximum entropy model for fixed marginals and correlation
-        (emp_lambda_0, emp_lambda_1, emp_correlation) = constraints(emp_p)
-        x0 = [emp_lambda_0, emp_lambda_1, emp_correlation]
-        g = survival(x0, cont, n_mc)
+        g = survival(x0, cont, nmc)
     else:
         # Search supremum of survival function
-        valfun = lambda theta: -survival(theta.T, cont, n_mc)
+        fun = lambda theta: -survival(theta.T, cont, nmc)
         # Constraints for probability mass functions
-        bounds = [(finfo(float).eps, x.max()+1.0), \
+        bnds = [(finfo(float).eps, x.max()+1.0), \
                 (finfo(float).eps, y.max()+1.0), (-1.0, 1.0)]
-        result = differential_evolution(valfun, bounds, maxiter=maxiter)
+        result = minimize(fun, x0, method='TNC', bounds=bnds, \
+                options={'maxiter': maxiter})
         # Run stochastic value function again at optimal value
-        g = -valfun(result.x)
+        g = -fun(result.x)
     # Monte Carlo finite sample correction
-    p = (n_mc * g + 1.0) / (n_mc + 1.0)
+    p = (nmc * g + 1.0) / (nmc + 1.0)
     h = p < alpha
     return (h, p)
 
-def survival(theta, cont, n_mc):
+def survival(theta, cont, nmc):
     '''
     Survival function of the test statistic.
     '''
     # Extract arguments
-    n = cont.sum()
+    total_sum = cont.sum()
     lambda_0 = theta[0]
     lambda_1 = theta[1]
     correlation = theta[2]
@@ -81,15 +82,15 @@ def survival(theta, cont, n_mc):
     # Find corresponding maximum entropy distribution
     epmf = reference_pmf(marginal_0, marginal_1, correlation).flatten()
     epmf = epmf[epmf > 0.0]
-    pmf = cont.flatten() / n
+    pmf = cont.flatten() / total_sum
     pmf = pmf[pmf > 0.0]
     # Divergence measure: Entropy difference
     test_stat = abs((pmf * log2(pmf)).sum() - (epmf * log2(epmf)).sum())
     # Find critical region via Monte Carlo sampling
-    sample_stat = zeros((n_mc,), dtype=float64)
-    for i in range(n_mc):
+    sample_stat = zeros((nmc,), dtype=float64)
+    for i in range(nmc):
         # Draw a sample from the multinomial distribution
-        sample = random.multinomial(n, epmf).flatten() / n
+        sample = random.multinomial(total_sum, epmf).flatten() / total_sum
         sample = sample[sample > 0.0]
         sample_stat[i] = abs((sample * log2(sample)).sum() \
                 - (epmf * log2(epmf)).sum())
@@ -98,7 +99,7 @@ def survival(theta, cont, n_mc):
     u = random.rand(n_ties+1)
     # Estimate survival function
     g = ((test_stat < sample_stat).sum() + (u[-1] >= u[1:n_ties]).sum()) \
-            / float(n_mc)
+            / float(nmc)
     return g
 
 def reference_pmf(marginal_0, marginal_1, correlation):
@@ -117,13 +118,14 @@ def reference_pmf(marginal_0, marginal_1, correlation):
     sigma_0 = sqrt(dot(marginal_0, (support_0-lambda_0)**2))
     sigma_1 = sqrt(dot(marginal_1, (support_1-lambda_1)**2))
     product_moment = correlation*sigma_0*sigma_1+lambda_0*lambda_1
-    # Initial values
-    x0 = concatenate((marginal_0, marginal_1, [0.0]))
     # Start with independent distribution
-    x = fsolve(maxent_val, x0, args=(marginal_0, marginal_1, product_moment))
-    f_0 = x[0:n_0]
-    f_1 = x[n_0:(n_0+n_1)]
-    mu = x[-1]
+    x0 = concatenate((marginal_0, marginal_1, [0.0]))
+    # Find root
+    result = root(maxent_val, x0, args=(marginal_0, marginal_1, \
+            product_moment))
+    f_0 = result.x[0:n_0]
+    f_1 = result.x[n_0:(n_0+n_1)]
+    mu = result.x[-1]
     # Compute maximum entropy distribution
     p_me = outer(f_0, f_1) * exp(mu * outer(support_0, support_1))
     # Cut off negative values
@@ -145,11 +147,11 @@ def maxent_val(x, marginal_0, marginal_1, product_moment):
     f_1 = x[n_0:(n_0+n_1)]
     mu = x[-1]
     # Output vector
-    y = zeros(x.size, dtype='float64')
+    y = zeros(x.size, dtype=float64)
     y[0:n_0] = f_0 * dot(f_1, exp(mu * outer(support_1, support_0))) \
             - marginal_0
-    y[n_0:(n_0+n_1)] = f_1 * dot(f_0, exp(mu * outer(support_0, support_1))) \
-            - marginal_1
+    y[n_0:(n_0+n_1)] = f_1 * dot(f_0, exp(mu * \
+            outer(support_0, support_1))) - marginal_1
     s = (outer(support_0, support_1) * outer(f_0, f_1) \
             * exp(mu * outer(support_0, support_1))).sum()
     y[-1] = s - product_moment
@@ -159,12 +161,12 @@ def constraints(p):
     '''
     Constraints for the maximum entropy distribution.
     '''
-    n = p.shape
+    dim = p.shape
     # Marginal distributions
     marginal_0 = p.sum(axis=1)
     marginal_1 = p.sum(axis=0)
-    support_0 = arange(n[0])
-    support_1 = arange(n[1])
+    support_0 = arange(dim[0])
+    support_1 = arange(dim[1])
     # Expectations
     lambda_0 = dot(marginal_0, support_0)
     lambda_1 = dot(marginal_1, support_1)

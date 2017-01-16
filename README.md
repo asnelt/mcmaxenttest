@@ -1,7 +1,7 @@
 # mcmaxenttest
 
-Description
------------
+Package description
+-------------------
 
 This package implements a statistical test that can assess higher-order
 correlations of neural population spike counts in terms of an information
@@ -9,18 +9,14 @@ theoretic analysis. The test yields reliable results even when the number of
 experimental samples is small. If you use this software for publication, please
 cite [1].
 
-This program is provided "as is" with no warranty. The exact terms under which
-you may use and (re)distribute this program are detailed in the GNU General
-Public License, in the file COPYING.
-
 
 Files
 -----
 
-README.md    - This file
-LICENSE      - Software license
-demo.m       - Demonstration of how to apply the test to count data
-mcmaxenttest - Monte Carlo maximum entropy test
+* demo.m - Demonstration of how to apply the test to count data
+* mcmaxenttest - Monte Carlo maximum entropy test
+* README.md - This file
+* LICENSE - Software license
 
 
 Test description
@@ -55,16 +51,16 @@ Please see [1] for a more detailed description of the test.
 References
 ----------
 
-[1] Onken A, Dragoi V, Obermayer K (2012) A Maximum Entropy Test for Evaluating
-Higher-Order Correlations in Spike Counts. PLoS Comput Biol 8(6): e1002539.
-doi:10.1371/journal.pcbi.1002539
+1. Onken A, Dragoi V, Obermayer K (2012). A Maximum Entropy Test for
+Evaluating Higher-Order Correlations in Spike Counts.
+PLoS Comput Biol 8(6): e1002539. doi:10.1371/journal.pcbi.1002539
 
 
 License
 -------
 
 ```text
-Copyright (C) 2012 Arno Onken
+Copyright (C) 2012, 2017 Arno Onken
 
 This program is free software; you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by

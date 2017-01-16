@@ -18,21 +18,22 @@ the test to count data.
 """
 
 from scipy.stats import poisson, norm, multivariate_normal, uniform
-from mcmaxenttest import *
+from numpy import zeros
+from mcmaxenttest import mc_2nd_order_poisson_test
 
 
 # Number of test repetitions
 N_TRIALS = 20
 # Number of samples to draw in each trial
 N_SAMPLES = 100
-# Alpha level of the test
+# Significance level of the test
 ALPHA = 0.05
 # Poisson rate
-RATE = 3
+RATE = 5 
 
 # Apply test to independent Poisson samples
 print("Applying test to independent Poisson samples...")
-# Rejection flags
+# Rejection results
 h_ind = zeros((N_TRIALS, 1), dtype=bool)
 # p-values
 p_ind = zeros((N_TRIALS, 1))
@@ -49,7 +50,7 @@ print("Applying test to higher-order samples...")
 # Correlation parameters of mixture components
 RHO_1 = 0.9
 RHO_2 = -0.9
-# Rejection flags
+# Rejection results
 h_ho = zeros((N_TRIALS, 1), dtype=bool)
 # p-values
 p_ho = zeros((N_TRIALS, 1))
