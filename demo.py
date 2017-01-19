@@ -16,7 +16,6 @@
 Demonstration of a second order maximum entropy test showing how to apply the
 test to count data.
 """
-
 from scipy.stats import poisson, norm, multivariate_normal, uniform
 import numpy as np
 from mcmaxenttest import order2_poisson_test
@@ -94,7 +93,7 @@ def test_higher_order_poisson():
 
 def print_results(head_string, rejected, p_values):
     '''
-    Prints the test results.
+    Print the test results.
 
     Args:
         head_string: The heading to print.
