@@ -45,7 +45,7 @@ def order2_poisson_test(counts_0, counts_1, alpha=0.05, nmc=1000, maxiter=1000):
     cont = contingency_table(counts_0, counts_1)
     emp_pmf = cont / counts_0.size
     # Empirical parameters of the distribution
-    emp_par = DistributionParameters.estimate_from(emp_pmf)
+    emp_par = BivariatePoissonParameters.estimate_from(emp_pmf)
     # Initialize survival function optimization
     initial_point = emp_par.as_list()
     if maxiter < 1:
@@ -98,23 +98,21 @@ def survival(theta, cont, nmc):
     Returns:
         value: The survival value at theta.
     '''
-    pars = DistributionParameters(theta[0], theta[1], theta[2])
+    pars = BivariatePoissonParameters(theta[0], theta[1], theta[2])
     marginal_0 = poisson.pmf(np.arange(np.ceil(np.maximum(cont.shape[0], \
             poisson.isf(1e-4, pars.mean_0)+1))), pars.mean_0)
     marginal_1 = poisson.pmf(np.arange(np.ceil(np.maximum(cont.shape[1], \
             poisson.isf(1e-4, pars.mean_1)+1))), pars.mean_1)
     # Find corresponding maximum entropy distribution
-    pmf_ref = reference_pmf(marginal_0, marginal_1, pars.correlation).flatten()
-    pmf_emp = cont.flatten() / cont.sum()
+    model = Order2MaximumEntropyModel(marginal_0, marginal_1, pars.correlation)
     # Calculate empirical test statistic
-    test_stat = divergence(pmf_emp, pmf_ref)
+    test_stat = divergence(cont / cont.sum(), model.pmf())
     # Find critical region via Monte Carlo sampling
     sample_stat = np.zeros((nmc,), dtype=np.float64)
     for i in range(nmc):
-        # Draw a sample from the multinomial distribution
-        pmf_sample = np.random.multinomial(cont.sum(), pmf_ref).flatten() \
-                / cont.sum()
-        sample_stat[i] = divergence(pmf_sample, pmf_ref)
+        # Draw a sample from the maximum entropy model
+        sample = model.rvs(cont.sum())
+        sample_stat[i] = divergence(sample / cont.sum(), model.pmf())
     # Correct for ties
     n_ties = (test_stat == sample_stat).sum()
     uni = np.random.rand(n_ties+1)
@@ -138,86 +136,118 @@ def divergence(pmf_0, pmf_1):
     Returns:
         div: The distribution divergence.
     '''
-    div = abs(entropy(pmf_0) - entropy(pmf_1))
+    div = abs(entropy(pmf_0.flatten()) - entropy(pmf_1.flatten()))
     return div
 
-def reference_pmf(marginal_0, marginal_1, correlation):
+class Order2MaximumEntropyModel(object):
     '''
-    Maximum entropy distribution with marginals and correlation
-    coefficient as constraints.
-
-    Args:
-        marginal_0: Values of the first marginal distribution as an array.
-        marginal_1: Values of the second marginal distribution as an array.
-        correlation: Correlation coefficient as a scalar between -1 and 1.
-
-    Returns:
-        pmf_me: Values of the maximum entropy distribution as a two-dimensional
-                array.
+    This class represents a bivariate maximum entropy distribution with
+    marginals and correlation coefficient as constraints.
     '''
-    n_0 = marginal_0.size
-    n_1 = marginal_1.size
-    support_0 = np.arange(n_0)
-    support_1 = np.arange(n_1)
-    # Means of the marginals
-    mean_0 = np.dot(marginal_0, support_0)
-    mean_1 = np.dot(marginal_1, support_1)
-    # Standard deviations of the marginals
-    sigma_0 = np.sqrt(np.dot(marginal_0, (support_0-mean_0)**2))
-    sigma_1 = np.sqrt(np.dot(marginal_1, (support_1-mean_1)**2))
-    product_moment = correlation*sigma_0*sigma_1+mean_0*mean_1
-    # Start with independent distribution
-    initial_point = np.concatenate((marginal_0, marginal_1, [0.0]))
-    # Find root
-    result = root(maxent_errors, initial_point, args=(marginal_0, marginal_1, \
-            product_moment))
-    # Compute maximum entropy distribution
-    pmf_me = np.outer(result.x[0:n_0], result.x[n_0:(n_0+n_1)]) \
-            * np.exp(result.x[-1] * np.outer(support_0, support_1))
-    # Cut off negative values
-    pmf_me[pmf_me < 0] = 0
-    # Renormalize distribution
-    return pmf_me / pmf_me.sum()
+    def __init__(self, marginal_0, marginal_1, correlation):
+        '''
+        Constructs a maximum entropy distribution from given marginals and
+        correlation coefficient as contraints.
 
-def maxent_errors(point, marginal_0, marginal_1, product_moment):
+        Args:
+            marginal_0: Values of the first marginal distribution as an array.
+            marginal_1: Values of the second marginal distribution as an array.
+            correlation: Correlation coefficient as a scalar between -1 and 1.
+        '''
+        n_0 = marginal_0.size
+        n_1 = marginal_1.size
+        support_0 = np.arange(n_0)
+        support_1 = np.arange(n_1)
+        # Means of the marginals
+        mean_0 = np.dot(marginal_0, support_0)
+        mean_1 = np.dot(marginal_1, support_1)
+        # Standard deviations of the marginals
+        sigma_0 = np.sqrt(np.dot(marginal_0, (support_0-mean_0)**2))
+        sigma_1 = np.sqrt(np.dot(marginal_1, (support_1-mean_1)**2))
+        product_moment = correlation*sigma_0*sigma_1+mean_0*mean_1
+        # Start with independent distribution
+        initial_point = np.concatenate((marginal_0, marginal_1, [0.0]))
+        # Find root
+        result = root(self.__maxent_errors, initial_point, \
+                args=(marginal_0, marginal_1, product_moment))
+        # Compute maximum entropy distribution
+        self.pmf_me = np.outer(result.x[0:n_0], result.x[n_0:(n_0+n_1)]) \
+                * np.exp(result.x[-1] * np.outer(support_0, support_1))
+        # Cut off negative values
+        self.pmf_me[self.pmf_me < 0] = 0
+        # Renormalize distribution
+        self.pmf_me /= self.pmf_me.sum()
+
+    def pmf(self):
+        '''
+        Values of the probability mass function of the maximum entropy
+        distribution.
+
+        Returns:
+            pmf_me: Values of the maximum entropy distribution as a
+                    two-dimensional array.
+        '''
+        return self.pmf_me
+
+    def rvs(self, size=1):
+        '''
+        Random variates from the model distribution represented as a contingency
+        table with a sum of elements equal to the size argument.
+
+        Args:
+            size: Total number of samples corresponding to the sum of elements
+                  in the resulting contingency table. Defaults to 1.
+
+        Returns:
+            samples: Contingency table of the distribution samples as a
+                     two-dimensional array.
+        '''
+        # Draw a sample from the multinomial distribution
+        samples = np.random.multinomial(size, self.pmf_me.flatten())
+        samples = samples.reshape(self.pmf_me.shape)
+        return samples
+
+    @staticmethod
+    def __maxent_errors(point, marginal_0, marginal_1, product_moment):
+        '''
+        Error function for finding the discrete bivariate maximum entropy
+        distribution with marginals and correlation coefficient constraints.
+
+        Args:
+            point: The exponential parameters of the maximum entropy
+                   distribution for marginals and product moment concatenated
+                   into an array.
+            marginal_0: Values of the first marginal distribution as an array.
+            marginal_1: Values of the second marginal distribution as an array.
+            product_moment: The second order product moment.
+
+        Returns:
+            errors: The errors of marginal values and product moment when
+                    compared to those induced by the parameters in point,
+                    concatenated into an array.
+        '''
+        n_0 = marginal_0.size
+        n_1 = marginal_1.size
+        support_0 = np.arange(n_0)
+        support_1 = np.arange(n_1)
+        # Separate input
+        f_0 = point[0:n_0]
+        f_1 = point[n_0:(n_0+n_1)]
+        rho = point[-1]
+        # Output array
+        errors = np.zeros(point.size, dtype=np.float64)
+        errors[0:n_0] = f_0 * np.dot(f_1, np.exp(rho \
+                * np.outer(support_1, support_0))) - marginal_0
+        errors[n_0:(n_0+n_1)] = f_1 * np.dot(f_0, np.exp(rho \
+                * np.outer(support_0, support_1))) - marginal_1
+        point_moment = (np.outer(support_0, support_1) * np.outer(f_0, f_1) \
+                * np.exp(rho * np.outer(support_0, support_1))).sum()
+        errors[-1] = point_moment - product_moment
+        return errors
+
+class BivariatePoissonParameters(object):
     '''
-    Error function for finding the discrete bivariate maximum entropy
-    distribution with marginals and correlation coefficient constraints.
-
-    Args:
-        point: The exponential parameters of the maximum entropy distribution
-               for marginals and product moment concatenated into an array.
-        marginal_0: Values of the first marginal distribution as an array.
-        marginal_1: Values of the second marginal distribution as an array.
-        product_moment: The second order product moment.
-
-    Returns:
-        errors: The errors of marginal values and product moment when compared
-                to those induced by the parameters in point, concatenated into
-                an array.
-    '''
-    n_0 = marginal_0.size
-    n_1 = marginal_1.size
-    support_0 = np.arange(n_0)
-    support_1 = np.arange(n_1)
-    # Separate input
-    f_0 = point[0:n_0]
-    f_1 = point[n_0:(n_0+n_1)]
-    rho = point[-1]
-    # Output array
-    errors = np.zeros(point.size, dtype=np.float64)
-    errors[0:n_0] = f_0 * np.dot(f_1, np.exp(rho \
-            * np.outer(support_1, support_0))) - marginal_0
-    errors[n_0:(n_0+n_1)] = f_1 * np.dot(f_0, np.exp(rho \
-            * np.outer(support_0, support_1))) - marginal_1
-    point_moment = (np.outer(support_0, support_1) * np.outer(f_0, f_1) \
-            * np.exp(rho * np.outer(support_0, support_1))).sum()
-    errors[-1] = point_moment - product_moment
-    return errors
-
-class DistributionParameters(object):
-    '''
-    This class represents the parameters of a bivariate count distribution
+    This class represents the parameters of a bivariate Poisson distribution
     characterized by marginal means and a correlation coefficient.
     '''
     def __init__(self, mean_0, mean_1, correlation):
@@ -254,7 +284,7 @@ class DistributionParameters(object):
                  two-dimensional array.
 
         Returns:
-            pars: DistributionParameters object with means and correlations
+            pars: BivariatePoissonParameters object with means and correlations
                   estimated from the input distribution.
         '''
         size = pmf.shape
@@ -276,5 +306,5 @@ class DistributionParameters(object):
             correlation = (np.multiply(pmf, \
                     np.outer(support_0, support_1)).sum() - mean_0*mean_1) \
                     / (sigma_0*sigma_1)
-        pars = DistributionParameters(mean_0, mean_1, correlation)
+        pars = BivariatePoissonParameters(mean_0, mean_1, correlation)
         return pars
