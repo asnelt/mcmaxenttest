@@ -29,7 +29,7 @@ def order2_poisson_test(counts_0, counts_1, alpha=0.05, nmc=1000, maxiter=1000):
                   distribution as non-negative integer random values.
         counts_1: Array containing corresponding samples of the second element
                   of the bivariate distribution as non-negative integer random
-                  values of the same size as counts_0.
+                  values of the same size as `counts_0`.
         alpha: Significance level. Defaults to 0.05.
         nmc: Number of Monte Carlo samples. Defaults to 1000.
         maxiter: Maximum number of iterations for the survival function
@@ -40,7 +40,13 @@ def order2_poisson_test(counts_0, counts_1, alpha=0.05, nmc=1000, maxiter=1000):
                   entropy hypothesis at the specified significance level;
                   0 otherwise.
         p_value: p-value of the hypothesis.
+
+    Raises:
+        ValueError: If `counts_0` and `counts_1` are different lengths.
     '''
+    if len(counts_0) != len(counts_1):
+        raise ValueError("Arrays 'counts_0' and 'counts_1' must be same"
+                         " lengths.")
     # Generate contingency table and empirical distribution
     cont = contingency_table(counts_0, counts_1)
     emp_pmf = cont / counts_0.size
@@ -75,11 +81,17 @@ def contingency_table(counts_0, counts_1):
                   distribution as non-negative integer random values.
         counts_1: Array containing corresponding samples of the second element
                   of the bivariate distribution as non-negative integer random
-                  values of the same size as counts_0.
+                  values of the same size as `counts_0`.
 
     Returns:
         cont: Contingency table of the input count pairs.
+
+    Raises:
+        ValueError: If `counts_0` and `counts_1` are different lengths.
     '''
+    if len(counts_0) != len(counts_1):
+        raise ValueError("Arrays 'counts_0' and 'counts_1' must be same"
+                         " lengths.")
     cont = np.zeros((int(counts_0.max())+1, int(counts_1.max())+1), \
             dtype=np.float64)
     for i in range(counts_0.size):
@@ -96,7 +108,7 @@ def survival(theta, cont, nmc):
         nmc: Number of Monte Carlo samples.
 
     Returns:
-        value: The survival value at theta.
+        value: The survival value at `theta`.
     '''
     pars = BivariatePoissonParameters(theta[0], theta[1], theta[2])
     marginal_0 = poisson.pmf(np.arange(np.ceil(np.maximum(cont.shape[0], \
@@ -223,7 +235,7 @@ class Order2MaximumEntropyModel(object):
 
         Returns:
             errors: The errors of marginal values and product moment when
-                    compared to those induced by the parameters in point,
+                    compared to those induced by the parameters in `point`,
                     concatenated into an array.
         '''
         n_0 = marginal_0.size
@@ -284,8 +296,8 @@ class BivariatePoissonParameters(object):
                  two-dimensional array.
 
         Returns:
-            pars: BivariatePoissonParameters object with means and correlations
-                  estimated from the input distribution.
+            pars: `BivariatePoissonParameters` object with means and
+                  correlations estimated from the input distribution.
         '''
         size = pmf.shape
         # Marginal distributions
