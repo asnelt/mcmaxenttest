@@ -1,8 +1,6 @@
+============
 mcmaxenttest
-############
-
-Package description
--------------------
+============
 
 This package implements a statistical test that can assess higher-order
 correlations of neural population spike counts in terms of an information
@@ -61,7 +59,6 @@ PLoS Comput Biol 8(6): e1002539. doi:10.1371/journal.pcbi.1002539
 License
 -------
 
-```text
 Copyright (C) 2012, 2017 Arno Onken
 
 This program is free software; you can redistribute it and/or modify
@@ -76,4 +73,3 @@ GNU General Public License for more details.
 
 You should have received a copy of the GNU General Public License
 along with this program; if not, see <http://www.gnu.org/licenses/>.
-```
