@@ -12,7 +12,7 @@ cite [1].
 Files
 -----
 
-* demo_mcmaxenttest.py - Demonstration of how to apply the test to count data
+* demo_mcmaxenttest - Demonstration of how to apply the test to count data
 * mcmaxenttest/mcmaxenttest.py - Monte Carlo maximum entropy test
 * mcmaxenttest/tests/test_mcmaxenttest.py - Tests for the mcmaxenttest module.
 * README.rst - This file
