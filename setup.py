@@ -32,5 +32,7 @@ setup(
     packages=["mcmaxenttest"],
     scripts=['demo_mcmaxenttest'],
     install_requires=["scipy"],
-    test_suite="nose2.collector.collector"
+    test_suite="nose2.collector.collector",
+    tests_require=["nose2"],
+    include_package_data=True
 )
