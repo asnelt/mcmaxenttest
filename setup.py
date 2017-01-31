@@ -30,6 +30,7 @@ setup(
     author_email="asnelt@asnelt.org",
     license="GPL-3.0",
     packages=["mcmaxenttest"],
+    scripts=['demo_mcmaxenttest'],
     install_requires=["scipy"],
     test_suite="nose2.collector.collector"
 )

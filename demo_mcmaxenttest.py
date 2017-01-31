@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 # Copyright (C) 2012, 2017 Arno Onken
 #
 # This file is part of the mcmaxenttest package.
@@ -20,7 +21,7 @@ test to count data.
 """
 from scipy.stats import poisson, norm, multivariate_normal, uniform
 import numpy as np
-from mcmaxenttest import order2_poisson_test
+from mcmaxenttest import mcmaxenttest
 
 def main():
     '''
@@ -52,8 +53,9 @@ def test_independent_poisson():
         counts_0 = poisson.rvs([rate] * n_samples)
         counts_1 = poisson.rvs([rate] * n_samples)
         # Apply test
-        (rejected_ind[i], p_values_ind[i]) = order2_poisson_test(counts_0, \
-                counts_1, alpha=alpha)
+        (rejected_ind[i], p_values_ind[i]) \
+                = mcmaxenttest.order2_poisson_test(counts_0, counts_1, \
+                                                   alpha=alpha)
     print_results("Independent Poisson samples:", rejected_ind, p_values_ind)
 
 def test_higher_order_poisson():
@@ -88,8 +90,9 @@ def test_higher_order_poisson():
         counts_0 = poisson.ppf(mix_0[:, 0], rate)
         counts_1 = poisson.ppf(mix_0[:, 1], rate)
         # Apply test
-        (rejected_ho[i], p_values_ho[i]) = order2_poisson_test(counts_0, \
-                counts_1, alpha=alpha)
+        (rejected_ho[i], p_values_ho[i]) \
+                = mcmaxenttest.order2_poisson_test(counts_0, counts_1, \
+                                                   alpha=alpha)
     # Print results
     print_results("Higher-order samples:", rejected_ho, p_values_ho)
 
