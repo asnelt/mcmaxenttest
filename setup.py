@@ -24,15 +24,27 @@ setup(
     version="1.0",
     description=("Statistical test to detect higher-order correlations between"
                  " count variables."),
+    long_description=("This package implements a statistical test that can"
+                      " assess higher-order correlations of neural population"
+                      " spike counts in terms of an information theoretic"
+                      " analysis. The test yields reliable results even when"
+                      " the number of experimental samples is small."),
     keywords="monte carlo poisson test maximum entropy correlation",
     url="https://github.com/asnelt/mcmaxenttest/",
     author="Arno Onken",
     author_email="asnelt@asnelt.org",
-    license="GPL-3.0",
+    license="GPLv3+",
     packages=["mcmaxenttest"],
-    scripts=['demo_mcmaxenttest'],
+    scripts=["demo_mcmaxenttest"],
     install_requires=["scipy"],
     test_suite="nose2.collector.collector",
     tests_require=["nose2"],
-    include_package_data=True
+    classifiers=[
+        "Development Status :: 5 - Production/Stable",
+        "Intended Audience :: Science/Research",
+        ("License :: OSI Approved :: GNU General Public License v3 or later"
+        " (GPLv3+)"),
+        "Operating System :: OS Independent",
+        "Programming Language :: Python",
+        "Topic :: Scientific/Engineering"]
 )
